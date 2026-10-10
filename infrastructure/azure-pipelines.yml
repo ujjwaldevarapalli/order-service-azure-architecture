@@ -1,0 +1,59 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  TF_VERSION: '1.5.7'
+
+jobs:
+- job: Terraform
+  displayName: 'Terraform Infrastructure'
+  steps:
+    - task: UseTerraform@0
+      inputs:
+        terraformVersion: $(TF_VERSION)
+
+    - script: |
+        terraform init
+      displayName: 'Terraform Init'
+      workingDirectory: infrastructure
+
+    - script: |
+        terraform plan -out=tfplan
+      displayName: 'Terraform Plan'
+      workingDirectory: infrastructure
+
+    - script: |
+        terraform apply -auto-approve tfplan
+      displayName: 'Terraform Apply'
+      workingDirectory: infrastructure
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
+
+- job: BuildAndDeploy
+  displayName: 'Build & Deploy Azure Function'
+  dependsOn: Terraform
+  steps:
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'build'
+        projects: 'OrderApi/OrderApi.csproj'
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: 'OrderApi'
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/OrderApi.zip'
+
+    - task: AzureFunctionApp@1
+      inputs:
+        azureSubscription: '$(AZURE_SUBSCRIPTION)' # Service connection
+        appType: 'functionApp'
+        appName: '$(function_app_name)'
+        package: '$(Build.ArtifactStagingDirectory)/OrderApi.zip'
