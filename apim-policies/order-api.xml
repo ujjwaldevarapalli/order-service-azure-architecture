@@ -1,0 +1,17 @@
+<!-- API Management policies for Order API -->
+<policies>
+    <inbound>
+        <base />
+        <rate-limit-by-key calls="100" renewal-period="60" key="@(context.subscription.key)" />
+        <validate-jwt header-name="Authorization" failed-validation-error-message="Unauthorized. Please provide a valid OAuth2 token." />
+    </inbound>
+    <backend>
+        <forward-request />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

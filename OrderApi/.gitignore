@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+.env
+local.settings.json
+.env.*
+*.user
+*.suo
+*.userprefs
+.vscode/
